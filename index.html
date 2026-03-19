@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UltraSearch AI</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: Arial;
+        }
+
+        body {
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* 🌈 Animated Background */
+        body {
+            background: linear-gradient(-45deg,#1f4037,#99f2c8,#1f4037,#ff6a00);
+            background-size: 400% 400%;
+            animation: bg 10s infinite;
+        }
+
+        @keyframes bg {
+            0%{background-position:0%}
+            50%{background-position:100%}
+            100%{background-position:0%}
+        }
+
+        /* Login */
+        .login, .app {
+            text-align: center;
+            margin-top: 100px;
+            animation: fade 1s;
+        }
+
+        input {
+            padding: 15px;
+            border-radius: 30px;
+            border: none;
+            width: 300px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: black;
+            color: white;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+        }
+
+        .box {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        /* Results */
+        .results {
+            width: 60%;
+            margin: 20px auto;
+            text-align: left;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+            animation: slide 0.5s;
+        }
+
+        @keyframes slide {
+            from {opacity:0; transform:translateY(20px);}
+            to {opacity:1;}
+        }
+
+        img {
+            width: 120px;
+            margin: 5px;
+            border-radius: 10px;
+        }
+
+        .topbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .dark {
+            background: #111 !important;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<!-- Login -->
+<div id="login" class="login">
+    <h1>UltraSearch Login</h1>
+    <input id="user" placeholder="Enter username"><br>
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- App -->
+<div id="app" class="app" style="display:none;">
+
+    <div class="topbar">
+        <span id="username"></span>
+        <div>
+            <button onclick="toggleDark()">🌙</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <h1>UltraSearch AI</h1>
+
+    <div class="box">
+        <input id="search" placeholder="Search anything..."><br>
+        <button onclick="search()">Search</button>
+        <button onclick="voice()">🎤</button>
+    </div>
+
+    <h3>Your History</h3>
+    <div id="history"></div>
+
+    <div class="results" id="results"></div>
+
+</div>
+
+<script>
+let currentUser = "";
+
+/* LOGIN */
+function login(){
+    let u = document.getElementById("user").value;
+    if(!u) return alert("Enter username");
+
+    currentUser = u;
+    localStorage.setItem("user", u);
+
+    document.getElementById("login").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("username").innerText = u;
+
+    loadHistory();
+}
+
+/* LOGOUT */
+function logout(){
+    localStorage.removeItem("user");
+    location.reload();
+}
+
+/* SEARCH */
+async function search(){
+    let q = document.getElementById("search").value;
+    let res = document.getElementById("results");
+
+    if(!q) return;
+
+    res.innerHTML = "Loading...";
+
+    saveHistory(q);
+
+    let wiki = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${q}`);
+    let data = await wiki.json();
+
+    let images = "";
+    for(let i=0;i<4;i++){
+        images += `<img src="https://source.unsplash.com/200x150/?${q}&sig=${i}">`;
+    }
+
+    res.innerHTML = `
+        <div class="card">🤖 AI: Best result for "${q}"</div>
+
+        <div class="card">
+            📖 ${data.extract || "No info"}
+        </div>
+
+        <div class="card">
+            🎥 <a href="https://www.youtube.com/results?search_query=${q}" target="_blank">YouTube</a>
+        </div>
+
+        <div class="card">
+            📸 ${images}
+        </div>
+    `;
+}
+
+/* VOICE */
+function voice(){
+    let rec = new webkitSpeechRecognition();
+    rec.onresult = e=>{
+        document.getElementById("search").value = e.results[0][0].transcript;
+        search();
+    }
+    rec.start();
+}
+
+/* DARK MODE */
+function toggleDark(){
+    document.body.classList.toggle("dark");
+}
+
+/* HISTORY */
+function saveHistory(q){
+    let h = JSON.parse(localStorage.getItem("history")) || [];
+    h.push(q);
+    localStorage.setItem("history", JSON.stringify(h));
+    loadHistory();
+}
+
+function loadHistory(){
+    let h = JSON.parse(localStorage.getItem("history")) || [];
+    let div = document.getElementById("history");
+    div.innerHTML = "";
+
+    h.slice(-5).forEach(item=>{
+        div.innerHTML += `<div>${item}</div>`;
+    });
+}
+
+/* AUTO LOGIN */
+window.onload = ()=>{
+    let u = localStorage.getItem("user");
+    if(u){
+        currentUser = u;
+        document.getElementById("login").style.display="none";
+        document.getElementById("app").style.display="block";
+        document.getElementById("username").innerText = u;
+        loadHistory();
+    }
+}
+</script>
+
+</body>
+</html>
